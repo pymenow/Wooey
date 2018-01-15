@@ -348,6 +348,14 @@ def add_wooey_script(script_version=None, script_path=None, group=None, script_n
     # make our parameters
     parameter_index = 0
     for parser_name, parser_inputs in six.iteritems(script_schema['inputs']):
+        try:
+            parser, created = ScriptParser.objects.get_or_create(name=parser_name, script_version__script=wooey_script)
+        except MultipleObjectsReturned:
+            parser = ScriptParser.objects.filter(
+                name=parser_name,
+                script_version__script=wooey_script
+            ).order_by('id').first()
+
         for param_group_info in parser_inputs:
             param_group_name = param_group_info.get('group')
             try:
@@ -355,14 +363,6 @@ def add_wooey_script(script_version=None, script_path=None, group=None, script_n
             except MultipleObjectsReturned:
                 param_group = ScriptParameterGroup.objects.filter(
                     group_name=param_group_name,
-                    script_version__script=wooey_script
-                ).order_by('id').first()
-
-            try:
-                parser, created = ScriptParser.objects.get_or_create(name=parser_name, script_version__script=wooey_script)
-            except MultipleObjectsReturned:
-                parser = ScriptParser.objects.filter(
-                    name=parser_name,
                     script_version__script=wooey_script
                 ).order_by('id').first()
 
@@ -385,6 +385,7 @@ def add_wooey_script(script_version=None, script_path=None, group=None, script_n
                     'collapse_arguments': 'collapse_arguments' in param.get('param_action', set()),
                 }
                 parameter_index += 1
+
                 script_params = ScriptParameter.objects.filter(
                     **script_param_kwargs
                 ).filter(
@@ -392,6 +393,7 @@ def add_wooey_script(script_version=None, script_path=None, group=None, script_n
                     parameter_group__group_name=param_group_name,
                     parser__name=parser_name
                 ).distinct()
+
                 if not script_params:
                     script_param_kwargs['parser'] = parser
                     script_param_kwargs['parameter_group'] = param_group
